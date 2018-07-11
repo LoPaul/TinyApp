@@ -6,41 +6,62 @@ const bodyParser = require("body-parser");
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
 
-const urlDatabase = {
+let urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
+// handle page not found error
+app.use((req, res) => {
+  res.status(404).render("error404NotFound");
+})
+
+app.post("/urls/:id/delete", (req, res) => {
+  let shortURL = req.params.id;
+  if (Object.keys(urlDatabase).includes(shortURL)) {
+    delete urlDatabase[shortURL];
+  }
+  res.redirect("/urls");
+});
 
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
-app.get("/urls/:id", (req, res, next) => {
+app.get("/urls/:id", (req, res) => {
   let templateVars = getURLs(req.params.id);
   if (templateVars !== null) {
     res.render("urls_show", templateVars);
   } else {
-    res.end("Error Message 404: Referencing a non-existing shortURL!");
+  res.render("error404NotFound");
   }
 });
 
 app.get("/", (req, res) => {
-  res.end("Hello!");
+  res.redirect("/urls");
+});
+
+app.get("/urls", (req, res) => {
+  let templateVars = { urls: urlDatabase };
+  res.render("urls_index", templateVars);
 });
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-app.get("/urls", (req, res) => {
-  let templateVars = { urls: urlDatabase };
-  res.render("urls_index", templateVars);
-  console.log(req.route);
-});
-
 app.post("/urls", (req, res) => {
   urlDatabase[generateRandomString()] = req.body.longURL;
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
+  res.redirect("/urls");
+});
+
+// update URLs if logged in
+app.post("/urls/:id", (req, res) => {
+  let shortURL = urlDatabase[req.params.id];
+  if (Object.keys(urlDatabase).includes(shortURL)) {
+    urlDatabase[shortURL] = req.body.longURL;
+  }
+  res.redirect("/urls");
 });
 
 app.get("/u/:shortURL", (req, res) => {
@@ -63,7 +84,6 @@ app.listen(PORT, () => {
 // genereate a random string of length 6
 function generateRandomString() {
   let result = Math.random().toString(36).slice(-6);
-  console.log(urlDatabase.keys);
   return Object.keys(urlDatabase).includes(result) ? generateRandomString : result;
 }
 
