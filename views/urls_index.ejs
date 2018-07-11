@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include partials/_header %>
+</head>
+<body>
+  <table>
+    <tr><th>Short URLs</th><th>URLs</th></tr>
+    <% for(var url in urls) { %>
+    <tr><td><%= url %></td><td><%= urls[url] %></td></tr>
+    <% } %>
+</table>
+</body>
+</html>
