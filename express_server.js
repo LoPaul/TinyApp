@@ -11,10 +11,9 @@ let urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
-// handle page not found error
-app.use((req, res) => {
-  res.status(404).render("error404NotFound");
-})
+app.get("/", (req, res) => {
+  res.redirect("/urls");
+});
 
 app.post("/urls/:id/delete", (req, res) => {
   let shortURL = req.params.id;
@@ -37,9 +36,6 @@ app.get("/urls/:id", (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  res.redirect("/urls");
-});
 
 app.get("/urls", (req, res) => {
   let templateVars = { urls: urlDatabase };
