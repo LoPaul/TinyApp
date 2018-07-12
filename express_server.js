@@ -14,6 +14,15 @@ let urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+// update URLs if logged in
+app.post("/urls/:id", (req, res) => {
+  let shortURL = req.params.id;
+  if (Object.keys(urlDatabase).includes(shortURL)) {
+    urlDatabase[shortURL] = req.body.longURL;
+  }
+  res.redirect("/urls");
+});
+
 app.post("/urls/:id/delete", (req, res) => {
   let shortURL = req.params.id;
   if (Object.keys(urlDatabase).includes(shortURL)) {
@@ -31,6 +40,12 @@ app.post("/logout", (req, res) => {
   res.clearCookie("username");
   res.redirect("/urls");
 });
+
+app.post("/urls", (req, res) => {
+  urlDatabase[generateRandomString()] = req.body.longURL;
+  res.redirect("/urls");
+});
+
 
 app.get("/", (req, res) => {
   res.redirect("/urls");
@@ -55,20 +70,6 @@ app.get("/urls", (req, res) => {
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
-});
-
-app.post("/urls", (req, res) => {
-  urlDatabase[generateRandomString()] = req.body.longURL;
-  res.redirect("/urls");
-});
-
-// update URLs if logged in
-app.post("/urls/:id", (req, res) => {
-  let shortURL = urlDatabase[req.params.id];
-  if (Object.keys(urlDatabase).includes(shortURL)) {
-    urlDatabase[shortURL] = req.body.longURL;
-  }
-  res.redirect("/urls");
 });
 
 app.get("/u/:shortURL", (req, res) => {
