@@ -2,18 +2,15 @@
 <html lang="en">
   <h1>TinyApp</h1>
   <body>
-    <% if (username === undefined) { %>
-      <form action="/login" method="POST" style="margin2px;">
-        <label for="longURL">Username:</label>
-        <input id="username" type="text" name="username" value=<%- username %> >
-        <input type="submit" value="Login">
+  <% if (user) { %>
+    <h4>Email:  <%- user.email %>
+      <form action = "/logout" method = "post">
+          <input type="submit" name="logout" value="Logout" />
       </form>
-      <% } else { %>
-      <form action="/logout" method="POST" style="margin2px;">
-        <label for="longURL">Username:</label>
-        <input id="username" type="text" name="username" value=<%- username %> readonly>
-        <input type="submit" value="Logout">
-      </form>
+    </h4>
+  <% } else { %>
+      <a href="/login">Login</a>
+      <a href="/register">Register</a>
     <% } %>
   </body>
 </html>

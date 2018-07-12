@@ -9,10 +9,10 @@
     <tr><th>Short URLs</th><th>URLs</th></tr>
     <% for(var url in urls) { %>
     <tr>
-      <td><%- url %></td>
-      <td><%- urls[url] %></td>
-      <td><button><form method="GET" action="<%-`/urls/${url}`%>">        <input type="submit" value="Edit">  </input></form></button></td>
-      <td><button><form method="POST" action="<%-`/urls/${url}/delete`%>"><input type="submit" value="Delete"></input></form></button></td>
+      <td><%- urls[url].shortURL %></td>
+      <td><%- urls[url].longURL %></td>
+      <td><button><form method="GET" action="<%-`/urls/${urls[url].shortURL}`%>">        <input type="submit" value="Edit">  </input></form></button></td>
+      <td><button><form method="POST" action="<%-`/urls/${urls[url].shortURL}/delete`%>"><input type="submit" value="Delete"></input></form></button></td>
     </tr>
     <% } %>
     <tr>

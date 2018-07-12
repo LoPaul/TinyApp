@@ -10,8 +10,15 @@ app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
 
 let urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": { shortURL: "b2xVn2",
+    longURL: "http://www.lighthouselabs.ca",
+    user_id: "userRandomID"},
+  "9sm5xK": { shortURL: "9sm5xK",
+    longURL: "http://www.google.com",
+    user_id: "user2RandomID"},
+  "803m5xK" : { shortURL: "803m5xK",
+    longURL: "http://www.google.com",
+    user_id: "user2RandomID"}
 };
 var templateVars = {
       urls: urlDatabase
@@ -38,15 +45,17 @@ const users = {
 // update URLs if logged in
 app.post("/urls/:id", (req, res) => {
   let shortURL = req.params.id;
-  if (Object.keys(urlDatabase).includes(shortURL)) {
-    urlDatabase[shortURL] = req.body.longURL;
+  let urls = urlDatabaseWith(req).find(each => each.shortURL === shortURL);
+  if (urls) {
+    urls.longURL = req.body.longURL;
   }
   res.redirect("/urls");
 });
 
 app.post("/urls/:id/delete", (req, res) => {
   let shortURL = req.params.id;
-  if (Object.keys(urlDatabase).includes(shortURL)) {
+  let urls = urlDatabaseWith(req).find(each => each.shortURL === shortURL);
+  if (urls) {
     delete urlDatabase[shortURL];
   }
   res.redirect("/urls");
@@ -103,10 +112,9 @@ app.post("/register", (req, res) => {
 
 // update long URL, assign random generated ID
 app.post("/urls", (req, res) => {
-  urlDatabase[generateRandomString()] = req.body.longURL;
+  addLongURL(req.body.longURL, req);
   res.redirect("/urls");
 });
-
 
 app.get("/", (req, res) => {
   res.redirect("/urls");
@@ -114,18 +122,24 @@ app.get("/", (req, res) => {
 
 app.get("/login", (req, res) => {
   res.render("login", getTemplateVars(req));
+
 });
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new", getTemplateVars(req));
+  if (verifyLogin(req)) {
+    res.render("urls_new", getTemplateVars(req));
+  } else {
+    res.redirect("/login");
+  }
 });
 
 app.get("/urls/:id", (req, res) => {
   let shortURL = req.params.id;
   let params = getTemplateVars(req);
-  if(Object.keys(urlDatabase).includes(shortURL)) {
-    params["shortURL"] = shortURL;
-    params["longURL"] = urlDatabase[shortURL];
+  let urlRec = urlDatabaseWith(req).find(each => each.shortURL === shortURL);
+  if(urlRec) {
+    params["shortURL"] = urlRec.shortURL;
+    params["longURL"] = urlRec.longURL;
     res.render("urls_show", params);
     return
   }
@@ -133,7 +147,12 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  res.render("urls_index", getTemplateVars(req));
+  if (verifyLogin(req)) {
+    res.render("urls_index", getTemplateVars(req));
+  } else {
+    res.redirect("/login");
+  }
+
 });
 
 app.get("/urls.json", (req, res) => {
@@ -156,6 +175,7 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
+
 // genereate a random string of length 6
 function generateRandomString() {
   let result = Math.random().toString(36).slice(6);
@@ -163,10 +183,27 @@ function generateRandomString() {
 }
 
 function getTemplateVars(req) {
-  return {...templateVars, user_id: req.cookies["user_id"], user: users[req.cookies["user_id"]] };
+  return {urls: urlDatabaseWith(req), user_id: req.cookies["user_id"], user: users[req.cookies["user_id"]] };
 }
 
 function generateRandomUserID() {
   let newID = generateRandomString();
   return Object.keys(users).includes(newID) ? generateRandomUserID() : newID;
+}
+
+function verifyLogin(req) {
+  return req.cookies["user_id"] && Object.keys(users).includes(req.cookies["user_id"])
+}
+
+function urlDatabaseWith(req) {
+  return Object.values(urlDatabase).filter(each => each.user_id === req.cookies["user_id"])
+}
+
+function addLongURL(longURL, req) {
+  let shortURL = generateRandomString();
+  urlDatabase[shortURL] = {
+    shortURL: shortURL,
+    longURL, longURL,
+    user_id: req.cookies["user_id"]
+  }
 }
