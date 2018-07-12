@@ -41,7 +41,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-  let urlVars = getURLVars(req.params.id, templateVars(req));8
+  let urlVars = getURLVars(req.params.id, templateVars(req));
   if (urlVars !== null) {
     res.render("urls_show", urlVars);
   } else {
