@@ -13,6 +13,27 @@ let urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+var templateVars = {
+      urls: urlDatabase
+//   username: req.cookies["username"]
+  };
+const users = {
+  "userRandomID": {
+    id: "userRandomID",
+    email: "user@example.com",
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk"
+   },
+ "user3RandomID": {
+    id: "user3RandomID",
+    email: "a@b.c",
+    password: "abc"
+  }
+}
 
 // update URLs if logged in
 app.post("/urls/:id", (req, res) => {
@@ -32,15 +53,55 @@ app.post("/urls/:id/delete", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  res.cookie("username", req.body.username);
+  let user;
+  for (let id in users) {
+    if (users[id].email === req.body.email) {
+      user = users[id];
+    }
+  }
+  if (!user) {
+    res.status(403).send("You don't have permission for access (email).");
+    return
+  }
+  if (user.password !== req.body.password) {
+    res.status(403).send("You don't have permission for access (password).");
+    return
+  }
+  res.cookie("user_id", user.id);
   res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("username");
+  res.clearCookie("user_id");
   res.redirect("/urls");
 });
 
+app.post("/register", (req, res) => {
+  if (req.body.email.length === 0) {
+    res.status(400).send('Bad Request with blank email');
+    return;
+  }
+  if (req.body.password.length === 0) {
+    res.status(400).send('Bad Request with blank password');
+    return;
+  }
+  for (let id in users) {
+    if (users[id].email === req.body.email) {
+      res.status(400).send('Bad Request with duplicate email');
+      return;
+    }
+  }
+  let newKey = generateRandomUserID();
+  users[newKey] = {
+    "id": newKey,
+    "email": req.body.email,
+    "password": req.body.password
+  };
+  res.cookie("user_id", newKey);
+  res.redirect("/");
+});
+
+// update long URL, assign random generated ID
 app.post("/urls", (req, res) => {
   urlDatabase[generateRandomString()] = req.body.longURL;
   res.redirect("/urls");
@@ -51,21 +112,28 @@ app.get("/", (req, res) => {
   res.redirect("/urls");
 });
 
+app.get("/login", (req, res) => {
+  res.render("login", getTemplateVars(req));
+});
+
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new", templateVars(req));
+  res.render("urls_new", getTemplateVars(req));
 });
 
 app.get("/urls/:id", (req, res) => {
-  let urlVars = getURLVars(req.params.id, templateVars(req));
-  if (urlVars !== null) {
-    res.render("urls_show", urlVars);
-  } else {
-  res.render("error404NotFound");
+  let shortURL = req.params.id;
+  let params = getTemplateVars(req);
+  if(Object.keys(urlDatabase).includes(shortURL)) {
+    params["shortURL"] = shortURL;
+    params["longURL"] = urlDatabase[shortURL];
+    res.render("urls_show", params);
+    return
   }
+  res.render("error404NotFound");
 });
 
 app.get("/urls", (req, res) => {
-  res.render("urls_index", templateVars(req));
+  res.render("urls_index", getTemplateVars(req));
 });
 
 app.get("/urls.json", (req, res) => {
@@ -80,25 +148,25 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
+app.get("/register", (req, res) => {
+  res.render("register", getTemplateVars(req));
+});
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
 // genereate a random string of length 6
 function generateRandomString() {
-  let result = Math.random().toString(36).slice(-6);
+  let result = Math.random().toString(36).slice(6);
   return Object.keys(urlDatabase).includes(result) ? generateRandomString : result;
 }
 
-// get shortURL and longURL if exists from given shortURL
-function getURLVars(shortURL, otherVars) {
-  return (Object.keys(urlDatabase).includes(shortURL)) ?
-    { ...otherVars, shortURL: shortURL, longURL: urlDatabase[shortURL] } :
-      null
+function getTemplateVars(req) {
+  return {...templateVars, user_id: req.cookies["user_id"], user: users[req.cookies["user_id"]] };
 }
 
-function templateVars(req) {
-  return {
-    urls: urlDatabase,
-    username: req.cookies["username"] };
+function generateRandomUserID() {
+  let newID = generateRandomString();
+  return Object.keys(users).includes(newID) ? generateRandomUserID() : newID;
 }
