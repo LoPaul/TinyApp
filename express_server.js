@@ -1,5 +1,8 @@
 var express = require("express");
+var cookieParser = require('cookie-parser')
+
 var app = express();
+app.use(cookieParser())
 var PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
 
@@ -11,10 +14,6 @@ let urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
-app.get("/", (req, res) => {
-  res.redirect("/urls");
-});
-
 app.post("/urls/:id/delete", (req, res) => {
   let shortURL = req.params.id;
   if (Object.keys(urlDatabase).includes(shortURL)) {
@@ -23,23 +22,35 @@ app.post("/urls/:id/delete", (req, res) => {
   res.redirect("/urls");
 });
 
+app.post("/login", (req, res) => {
+  res.cookie("username", req.body.username);
+  res.redirect("/urls");
+});
+
+app.post("/logout", (req, res) => {
+  res.clearCookie("username");
+  res.redirect("/urls");
+});
+
+app.get("/", (req, res) => {
+  res.redirect("/urls");
+});
+
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  res.render("urls_new", templateVars(req));
 });
 
 app.get("/urls/:id", (req, res) => {
-  let templateVars = getURLs(req.params.id);
-  if (templateVars !== null) {
-    res.render("urls_show", templateVars);
+  let urlVars = getURLVars(req.params.id, templateVars(req));8
+  if (urlVars !== null) {
+    res.render("urls_show", urlVars);
   } else {
   res.render("error404NotFound");
   }
 });
 
-
 app.get("/urls", (req, res) => {
-  let templateVars = { urls: urlDatabase };
-  res.render("urls_index", templateVars);
+  res.render("urls_index", templateVars(req));
 });
 
 app.get("/urls.json", (req, res) => {
@@ -68,11 +79,6 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
-app.get("/hello", (req, res) => {
-  res.end("<html><body>Hello <b>World</b></body></html>\n");
-});
-
-
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
@@ -84,8 +90,14 @@ function generateRandomString() {
 }
 
 // get shortURL and longURL if exists from given shortURL
-function getURLs(shortURL) {
+function getURLVars(shortURL, otherVars) {
   return (Object.keys(urlDatabase).includes(shortURL)) ?
-    { shortURL: shortURL, longURL: urlDatabase[shortURL] } :
+    { ...otherVars, shortURL: shortURL, longURL: urlDatabase[shortURL] } :
       null
+}
+
+function templateVars(req) {
+  return {
+    urls: urlDatabase,
+    username: req.cookies["username"] };
 }

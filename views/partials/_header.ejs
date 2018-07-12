@@ -1,6 +1,19 @@
+<!DOCTYPE html>
 <html lang="en">
-<title>TinyApp</title>
-<body>
   <h1>TinyApp</h1>
-</body>
+  <body>
+    <% if (username === undefined) { %>
+      <form action="/login" method="POST" style="margin2px;">
+        <label for="longURL">Username:</label>
+        <input id="username" type="text" name="username" value=<%- username %> >
+        <input type="submit" value="Login">
+      </form>
+      <% } else { %>
+      <form action="/logout" method="POST" style="margin2px;">
+        <label for="longURL">Username:</label>
+        <input id="username" type="text" name="username" value=<%- username %> readonly>
+        <input type="submit" value="Logout">
+      </form>
+    <% } %>
+  </body>
 </html>
