@@ -1,10 +1,17 @@
 var express = require("express");
 var cookieParser = require('cookie-parser')
+const bcrypt = require('bcrypt');
 
 var app = express();
 app.use(cookieParser())
 var PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
+
+const cookieSession = require('cookie-session');
+app.use(cookieSession({
+  name: 'session',
+  keys: [process.env.SESSION_SECRET || 'secret-string'],
+}));
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -28,17 +35,17 @@ const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    password: "$2b$10$SLgdH2vhyllkzVi2FON1VeANjAF7zoM32tG5tZbmcc0osrhxQqmAq"
   },
  "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    password: "$2b$10$kOaKk14BsFAeSY8ouNkIRuojjBgPkh.esQjRZQ5J0C9Sek9JM0r.y"
    },
  "user3RandomID": {
     id: "user3RandomID",
     email: "a@b.c",
-    password: "abc"
+    password: "$2b$10$f6hc3RiiLLNx32o2VabP4OSVRSUC3nxem6pOP0Pvhzd4Mjh6Tbepu"
   }
 }
 
@@ -72,16 +79,17 @@ app.post("/login", (req, res) => {
     res.status(403).send("You don't have permission for access (email).");
     return
   }
-  if (user.password !== req.body.password) {
+  if (!bcrypt.compareSync(req.body.password, user.password)) {
     res.status(403).send("You don't have permission for access (password).");
     return
   }
-  res.cookie("user_id", user.id);
+  req.session.user_id = user.id;
+  //res.cookie("user_id", user.id);
   res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session.user_id = undefined;
   res.redirect("/urls");
 });
 
@@ -104,9 +112,10 @@ app.post("/register", (req, res) => {
   users[newKey] = {
     "id": newKey,
     "email": req.body.email,
-    "password": req.body.password
+    "password": bcrypt.hashSync(req.body.password, 10)
   };
-  res.cookie("user_id", newKey);
+  res.session.user_id = newKey;
+  //res.cookie("user_id", newKey);
   res.redirect("/");
 });
 
@@ -147,6 +156,7 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
+  console.log(users);
   if (verifyLogin(req)) {
     res.render("urls_index", getTemplateVars(req));
   } else {
@@ -183,7 +193,10 @@ function generateRandomString() {
 }
 
 function getTemplateVars(req) {
-  return {urls: urlDatabaseWith(req), user_id: req.cookies["user_id"], user: users[req.cookies["user_id"]] };
+  return {
+    urls: urlDatabaseWith(req),
+    user_id: req.session.user_id,
+    user: users[req.session.user_id]};
 }
 
 function generateRandomUserID() {
@@ -192,11 +205,11 @@ function generateRandomUserID() {
 }
 
 function verifyLogin(req) {
-  return req.cookies["user_id"] && Object.keys(users).includes(req.cookies["user_id"])
+    return req.session.user_id && Object.keys(users).includes(req.session.user_id);
 }
 
 function urlDatabaseWith(req) {
-  return Object.values(urlDatabase).filter(each => each.user_id === req.cookies["user_id"])
+  return Object.values(urlDatabase).filter(each => each.user_id === req.session.user_id);
 }
 
 function addLongURL(longURL, req) {
@@ -204,6 +217,6 @@ function addLongURL(longURL, req) {
   urlDatabase[shortURL] = {
     shortURL: shortURL,
     longURL, longURL,
-    user_id: req.cookies["user_id"]
+    user_id: req.session.user_id
   }
 }
