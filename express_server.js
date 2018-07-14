@@ -1,36 +1,45 @@
 var express = require("express");
-var cookieParser = require('cookie-parser')
-const bcrypt = require('bcrypt');
+var cookieParser = require("cookie-parser");
+const bcrypt = require("bcrypt");
 
 var app = express();
 app.use(cookieParser())
 var PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
 
-const cookieSession = require('cookie-session');
+const cookieSession = require("cookie-session");
 app.use(cookieSession({
-  name: 'session',
-  keys: [process.env.SESSION_SECRET || 'secret-string'],
+  name: "session",
+  keys: [process.env.SESSION_SECRET || "secret-string"]
 }));
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
 
-let urlDatabase = {
+var urlDatabase = {
   "b2xVn2": { shortURL: "b2xVn2",
     longURL: "http://www.lighthouselabs.ca",
-    user_id: "userRandomID"},
+    user_id: "userRandomID",
+    creationDate: "Sun Jul 01 2018",
+    visitCount: 10,
+    uniqueCount: 100},
   "9sm5xK": { shortURL: "9sm5xK",
     longURL: "http://www.google.com",
-    user_id: "user2RandomID"},
+    user_id: "user2RandomID",
+    creationDate: "Sun May 01 2016",
+    visitCount: 18,
+    uniqueCount: 50},
   "803m5xK" : { shortURL: "803m5xK",
     longURL: "http://www.google.com",
-    user_id: "user2RandomID"}
+    user_id: "user2RandomID",
+    creationDate: "Wed Nov 01 2017",
+    visitCount: 34,
+    uniqueCount: 86}
 };
 var templateVars = {
-      urls: urlDatabase
-//   username: req.cookies["username"]
-  };
+  urls: urlDatabase
+};
+
 const users = {
   "userRandomID": {
     id: "userRandomID",
@@ -52,59 +61,67 @@ const users = {
 // update URLs if logged in
 app.post("/urls/:id", (req, res) => {
   let shortURL = req.params.id;
-  let urls = urlDatabaseWith(req).find(each => each.shortURL === shortURL);
+  let urls = urlRecordFor(req, shortURL);
   if (urls) {
-    urls.longURL = req.body.longURL;
+    urls.longURL = urlStringFor(req.body.longURL);
   }
   res.redirect("/urls");
 });
 
+// delete url record from database
 app.post("/urls/:id/delete", (req, res) => {
+  if (!verifyLogin(req)) {
+    res.redirect("/login");
+    return;
+  }
   let shortURL = req.params.id;
-  let urls = urlDatabaseWith(req).find(each => each.shortURL === shortURL);
+  let urls = urlRecordFor(req, shortURL);
   if (urls) {
     delete urlDatabase[shortURL];
+    res.redirect("/urls");
+    return;
   }
-  res.redirect("/urls");
+  res.render("error404NotFound");
 });
 
+// user login
 app.post("/login", (req, res) => {
+  if (verifyLogin(req)) {
+    res.redirect("/urls");
+  }
   let user;
   for (let id in users) {
     if (users[id].email === req.body.email) {
       user = users[id];
     }
   }
+  // Verify valid email associated with our user records
   if (!user) {
     res.status(403).send("You don't have permission for access (email).");
     return
   }
+  // Verify password matches password in user record
   if (!bcrypt.compareSync(req.body.password, user.password)) {
     res.status(403).send("You don't have permission for access (password).");
     return
   }
   req.session.user_id = user.id;
-  //res.cookie("user_id", user.id);
   res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
   req.session.user_id = undefined;
-  res.redirect("/urls");
+  res.redirect("/");
 });
 
 app.post("/register", (req, res) => {
-  if (req.body.email.length === 0) {
-    res.status(400).send('Bad Request with blank email');
-    return;
-  }
-  if (req.body.password.length === 0) {
-    res.status(400).send('Bad Request with blank password');
+  if ((req.body.email.length === 0) || (req.body.password.length === 0)) {
+    res.status(400).send("Bad Request with incorrect email or password");
     return;
   }
   for (let id in users) {
     if (users[id].email === req.body.email) {
-      res.status(400).send('Bad Request with duplicate email');
+      res.status(400).send("Bad Request with incorrect email or password");
       return;
     }
   }
@@ -114,24 +131,34 @@ app.post("/register", (req, res) => {
     "email": req.body.email,
     "password": bcrypt.hashSync(req.body.password, 10)
   };
-  res.session.user_id = newKey;
-  //res.cookie("user_id", newKey);
+  req.session.user_id = newKey;
   res.redirect("/");
 });
 
 // update long URL, assign random generated ID
 app.post("/urls", (req, res) => {
-  addLongURL(req.body.longURL, req);
-  res.redirect("/urls");
+  if (verifyLogin(req)) {
+    addLongURL(urlStringFor(req.body.longURL), req);
+    res.redirect("/urls");
+  } else {
+    res.redirect("/login");
+  }
 });
 
 app.get("/", (req, res) => {
-  res.redirect("/urls");
+  if (verifyLogin(req)) {
+    res.redirect("/urls");
+  } else {
+    res.redirect("/login");
+  }
 });
 
 app.get("/login", (req, res) => {
-  res.render("login", getTemplateVars(req));
-
+  if (verifyLogin(req)) {
+    res.redirect("/urls");
+  } else {
+    res.render("login", getTemplateVars(req));
+  }
 });
 
 app.get("/urls/new", (req, res) => {
@@ -142,10 +169,15 @@ app.get("/urls/new", (req, res) => {
   }
 });
 
+// Read URL record
 app.get("/urls/:id", (req, res) => {
+  if (!verifyLogin(req)) {
+    res.redirect("/login");
+    return;
+  }
   let shortURL = req.params.id;
   let params = getTemplateVars(req);
-  let urlRec = urlDatabaseWith(req).find(each => each.shortURL === shortURL);
+  let urlRec = urlRecordFor(req, shortURL);
   if(urlRec) {
     params["shortURL"] = urlRec.shortURL;
     params["longURL"] = urlRec.longURL;
@@ -155,26 +187,28 @@ app.get("/urls/:id", (req, res) => {
   res.render("error404NotFound");
 });
 
+// Send all applicable URLs for user
 app.get("/urls", (req, res) => {
-  console.log(users);
   if (verifyLogin(req)) {
     res.render("urls_index", getTemplateVars(req));
   } else {
-    res.redirect("/login");
+    res.render("error404NotFound");
   }
-
 });
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+// redirect to Long URL from given short URL
 app.get("/u/:shortURL", (req, res) => {
-  let longURL = urlDatabase[req.params.shortURL];
-  if((longURL.slice(0, 8) !== "https") && (longURL.slice(0, 7) !== "http://")) {
-    longURL = "http://" + longURL;
+  shortURL = req.params.shortURL;
+  let urlRec = urlRecordFor(req, shortURL);
+  if (urlRec) {
+    res.redirect(urlRec.longURL);
+  } else {
+    res.status(400).send("Bad Request with incorrect email or password");
   }
-  res.redirect(longURL);
 });
 
 app.get("/register", (req, res) => {
@@ -185,13 +219,13 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
-
 // genereate a random string of length 6
 function generateRandomString() {
   let result = Math.random().toString(36).slice(6);
   return Object.keys(urlDatabase).includes(result) ? generateRandomString : result;
 }
 
+// get template variables necesary for headers of each page
 function getTemplateVars(req) {
   return {
     urls: urlDatabaseWith(req),
@@ -205,7 +239,7 @@ function generateRandomUserID() {
 }
 
 function verifyLogin(req) {
-    return req.session.user_id && Object.keys(users).includes(req.session.user_id);
+  return req.session.user_id && Object.keys(users).includes(req.session.user_id);
 }
 
 function urlDatabaseWith(req) {
@@ -214,9 +248,28 @@ function urlDatabaseWith(req) {
 
 function addLongURL(longURL, req) {
   let shortURL = generateRandomString();
+  let newURL = longURL;
+
   urlDatabase[shortURL] = {
     shortURL: shortURL,
     longURL, longURL,
-    user_id: req.session.user_id
+    user_id: req.session.user_id,
+    creationDate: new Date().toDateString(),
+    visitCount: 0,
+    uniqueCount: 0
   }
+}
+
+// prefix long URL string with http:// where prefix is missing
+function urlStringFor(url) {
+  if((url.slice(0, 8) !== "https://") && (url.slice(0, 7) !== "http://")) {
+    return "http://" + url;
+  } else {
+    return url;
+  }
+}
+
+// filter database records for ones applicable to user
+function urlRecordFor(req, shortURL) {
+  return urlDatabaseWith(req).find(each => each.shortURL === shortURL);
 }

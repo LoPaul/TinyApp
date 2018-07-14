@@ -1,16 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
-  <h1>TinyApp</h1>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title></title>
+    <meta name="TinyApp" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" 
+      integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
+  </head>
   <body>
-  <% if (user) { %>
-    <h4>Email:  <%- user.email %>
-      <form action = "/logout" method = "post">
-          <input type="submit" name="logout" value="Logout" />
-      </form>
-    </h4>
-  <% } else { %>
-      <a href="/login">Login</a>
-      <a href="/register">Register</a>
-    <% } %>
+    <div class="container">
+        <div class="mx-auto" style="width: 200px;">
+            <H1 class="text-center">Tiny App</H1>
+          </div>
+        <% if (user) { %>
+        <div class="mx-auto" style="width: 200px;">
+          <H6 class="text-center">Email:  <%- user.email %></H6>
+        </div>
+        <div class="container">
+          <form action = "/logout" method = "post">
+            <input type="submit" name="logout" value="Logout" />
+          </form>
+      </div>
+     <p></p>
+      <% } else { %>
+        <ul class="nav">
+          <li class="nav-item">
+            <a class="nav-link" href="/login">Login</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/register">Register</a>
+          </li>
+        </ul>
+      <% } %>
+      <p></p><p></p>
+    </div>
   </body>
 </html>
