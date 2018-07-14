@@ -36,9 +36,6 @@ var urlDatabase = {
     visitCount: 34,
     uniqueCount: 86}
 };
-var templateVars = {
-  urls: urlDatabase
-};
 
 const users = {
   "userRandomID": {
@@ -60,18 +57,24 @@ const users = {
 
 // update URLs if logged in
 app.post("/urls/:id", (req, res) => {
+  if (!verifyLogin(req)) {
+    res.render("errors", res.status(401));
+    return;
+  }
   let shortURL = req.params.id;
   let urls = urlRecordFor(req, shortURL);
   if (urls) {
     urls.longURL = urlStringFor(req.body.longURL);
+    res.redirect("/urls");
+  } else {
+    res.render("error404NotFound");
   }
-  res.redirect("/urls");
 });
 
 // delete url record from database
 app.post("/urls/:id/delete", (req, res) => {
   if (!verifyLogin(req)) {
-    res.redirect("/login");
+    res.render("errors", res.status(401));
     return;
   }
   let shortURL = req.params.id;
@@ -97,12 +100,12 @@ app.post("/login", (req, res) => {
   }
   // Verify valid email associated with our user records
   if (!user) {
-    res.status(403).send("You don't have permission for access (email).");
+    res.status(403).send("You don't have permission for access.");
     return
   }
-  // Verify password matches password in user record
+  // Verify password matches password in user record.  Same error message by design.
   if (!bcrypt.compareSync(req.body.password, user.password)) {
-    res.status(403).send("You don't have permission for access (password).");
+    res.status(403).send("You don't have permission for access.");
     return
   }
   req.session.user_id = user.id;
@@ -115,13 +118,17 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
+  if (verifyLogin(req)) {
+    res.redirect("/urls");
+    return;
+  } 
   if ((req.body.email.length === 0) || (req.body.password.length === 0)) {
     res.status(400).send("Bad Request with incorrect email or password");
     return;
   }
   for (let id in users) {
     if (users[id].email === req.body.email) {
-      res.status(400).send("Bad Request with incorrect email or password");
+      res.status(400).send("Email already exists with another user.");
       return;
     }
   }
@@ -141,7 +148,7 @@ app.post("/urls", (req, res) => {
     addLongURL(urlStringFor(req.body.longURL), req);
     res.redirect("/urls");
   } else {
-    res.redirect("/login");
+    res.redirect("errors", res.status(401));
   }
 });
 
@@ -172,7 +179,7 @@ app.get("/urls/new", (req, res) => {
 // Read URL record
 app.get("/urls/:id", (req, res) => {
   if (!verifyLogin(req)) {
-    res.redirect("/login");
+    res.render("errors", res.status(401));
     return;
   }
   let shortURL = req.params.id;
@@ -192,7 +199,7 @@ app.get("/urls", (req, res) => {
   if (verifyLogin(req)) {
     res.render("urls_index", getTemplateVars(req));
   } else {
-    res.render("error404NotFound");
+    res.render("errors", res.status(401));
   }
 });
 
@@ -207,7 +214,7 @@ app.get("/u/:shortURL", (req, res) => {
   if (urlRec) {
     res.redirect(urlRec.longURL);
   } else {
-    res.status(400).send("Bad Request with incorrect email or password");
+    res.render("error404NotFound");
   }
 });
 
