@@ -210,7 +210,7 @@ app.get("/urls.json", (req, res) => {
 // redirect to Long URL from given short URL
 app.get("/u/:shortURL", (req, res) => {
   shortURL = req.params.shortURL;
-  let urlRec = urlRecordFor(req, shortURL);
+  let urlRec = urlDatabase[shortURL];
   if (urlRec) {
     res.redirect(urlRec.longURL);
   } else {
