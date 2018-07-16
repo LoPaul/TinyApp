@@ -100,12 +100,12 @@ app.post("/login", (req, res) => {
   }
   // Verify valid email associated with our user records
   if (!user) {
-    res.status(403).send("You don't have permission for access.");
+    res.status(403).send("Credentials are not correct.");
     return
   }
   // Verify password matches password in user record.  Same error message by design.
   if (!bcrypt.compareSync(req.body.password, user.password)) {
-    res.status(403).send("You don't have permission for access.");
+    res.status(403).send("Credentials are not correct.");
     return
   }
   req.session.user_id = user.id;
@@ -122,7 +122,7 @@ app.post("/register", (req, res) => {
     res.redirect("/urls");
     return;
   } 
-  if ((req.body.email.length === 0) || (req.body.password.length === 0)) {
+  if ((req.body.email.trim().length === 0) || (req.body.password.trim().length === 0)) {
     res.status(400).send("Bad Request with incorrect email or password");
     return;
   }
@@ -179,7 +179,7 @@ app.get("/urls/new", (req, res) => {
 // Read URL record
 app.get("/urls/:id", (req, res) => {
   if (!verifyLogin(req)) {
-    res.render("errors", res.status(401));
+    res.status(401).send('Error 401 - You are not authorized.  Please <a href="/"> Login </a>')
     return;
   }
   let shortURL = req.params.id;
