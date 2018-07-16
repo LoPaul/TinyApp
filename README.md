@@ -5,10 +5,11 @@ users to shorten long URLs (a la bit.ly).
 
 ## Final Product
 
-![Login Screen](/screenshots/login.png)
+![Login Screen](https://github.com/LoPaul/TinyApp/blob/master/docs/Login.png)
 
-screenshots/browse URLs.png - screen with collection of short and long URLs for current user
-screenshots/Edit-Long-URL - screen which captures new or updates existing long URL
+![screen with collection of short and long URLs for current user](https://github.com/LoPaul/TinyApp/blob/master/docs/Browse%20URLs.png)
+
+![screen which captures new or updates existing long URL](https://github.com/LoPaul/TinyApp/blob/master/docs/Edit-Long-URL.png)
 
 ## Dependencies
 
